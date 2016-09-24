@@ -1,68 +1,70 @@
-(function() {
-  'use strict';
+(function () {
+    'use strict';
 
-  angular.module('ionicImgCache', ['ionic'])
-    .run(init)
-    .factory('ionImgCacheSrv', ionImgCacheSrv)
-    .directive('ionImgCache', ionImgCache);
+    angular.module('ionicImgCache', ['ionic'])
+        .run(init)
+        .factory('ionImgCacheSrv', ionImgCacheSrv)
+        .directive('ionImgCache', ionImgCache);
 
-  init.$inject = ['$ionicPlatform'];
+    init.$inject = ['$ionicPlatform'];
 
-  function init($ionicPlatform) {
-    ImgCache.options.debug = false;
-    ImgCache.options.skipURIencoding = true;
-    ImgCache.options.chromeQuota = 50*1024*1024;
+    function init($ionicPlatform) {
+        ImgCache.options.debug = false;
+        ImgCache.options.skipURIencoding = true;
+        ImgCache.options.chromeQuota = 50 * 1024 * 1024;
 
-    $ionicPlatform.ready(function() {
-      ImgCache.init();
-    });
-  }
+        $ionicPlatform.ready(function () {
+            ImgCache.init();
+        });
+    }
 
-  ionImgCacheSrv.$inject = ['$q'];
+    ionImgCacheSrv.$inject = ['$q'];
 
-  function ionImgCacheSrv($q) {
-    var service = {
-      checkCacheStatus: checkCacheStatus
-    };
+    function ionImgCacheSrv($q) {
+        var service = {
+            checkCacheStatus: checkCacheStatus
+        };
 
-    return service;
+        return service;
 
-    function checkCacheStatus(src) {
-      var defer = $q.defer();
+        function checkCacheStatus(src,altSrc) {
+            var defer = $q.defer();
 
-      ImgCache.isCached(src, function(path, success) {
-        if (success) {
-          defer.resolve(path);
-        } else {
-          ImgCache.cacheFile(src, function() {
-            ImgCache.isCached(src, function(path, success) {
-              defer.resolve(path);
+            ImgCache.isCached(src, function (path, success) {
+                if (success) {
+                    defer.resolve(path);
+                } else {
+                    ImgCache.cacheFile(src, function () {
+                        ImgCache.isCached(src, function (path, success) {
+                            defer.resolve(path);
+                        }, defer.reject);
+                    }, defer.reject);
+                }
             }, defer.reject);
-          }, defer.reject);
+
+            return defer.promise;
         }
-      }, defer.reject);
-
-      return defer.promise;
     }
-  }
 
-  ionImgCache.$inject = ['ionImgCacheSrv'];
+    ionImgCache.$inject = ['ionImgCacheSrv'];
 
-  function ionImgCache(ionImgCacheSrv) {
-    var directive = {
-      restrict: 'A',
-      link: link
-    };
+    function ionImgCache(ionImgCacheSrv) {
+        var directive = {
+            restrict: 'A',
+            link: link
+        };
 
-    return directive;
+        return directive;
 
-    function link(scope, element, attrs) {
-      attrs.$observe('ngSrc', function(src) {
-        ionImgCacheSrv.checkCacheStatus(src)
-          .then(function() {
-            ImgCache.useCachedFile(element);
-          });
-      });
+        function link(scope, element, attrs) {
+            attrs.$observe('ngSrc', function (src) {
+                ionImgCacheSrv.checkCacheStatus(src,attrs["altSrc"])
+                    .then(function () {
+                        ImgCache.useCachedFile(element);
+                    },function(){
+                        attrs["ngSrc"] = attrs["altSrc"];
+                    });
+            });
+        }
     }
-  }
 })();
