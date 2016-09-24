@@ -62,7 +62,7 @@
                     .then(function () {
                         ImgCache.useCachedFile(element);
                     },function(){
-                        attrs["ngSrc"] = attrs["altSrc"];
+                        element.attr("src",attrs["altSrc"]);
                     });
             });
         }
